@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ropez Trader - Derivatives & Synthetic Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            DEFAULT: '#00E676',
+                            dark: '#00B0FF',
+                            accent: '#7C4DFF',
+                            bg: '#0B0E14',
+                            card: '#151922',
+                            border: '#2A2F3D'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0B0E14;
+            color: #F3F4F6;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(21, 25, 34, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-btn-rise {
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.35);
+        }
+        .glow-btn-fall {
+            box-shadow: 0 0 15px rgba(255, 82, 82, 0.35);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0E14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A2F3D;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-x-hidden bg-[#0B0E14] text-slate-100">
+
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-3 sm:px-4 py-2.5 flex items-center justify-between">
+        <div class="flex items-center space-x-3 cursor-pointer group" onclick="app.handleLogoClick()" title="Click to open System Admin Verification Panel">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                R
+            </div>
+            <div>
+                <div class="flex items-center space-x-1">
+                    <span class="font-extrabold text-base sm:text-lg tracking-wider text-white">ROPEZ</span>
+                    <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">TRADER</span>
+                </div>
+                <p class="text-[10px] text-slate-400 -mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> System Verified
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <!-- Account Selector Dropdown -->
+            <div class="relative inline-block">
+                <button onclick="app.toggleAccountDropdown()" class="glass-panel hover:bg-slate-800/80 px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center space-x-2 border border-slate-700/60 transition">
+                    <div class="text-right">
+                        <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-end gap-1">
+                            <span id="account-type-badge" class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold">DEMO</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+                        </div>
+                        <div id="account-balance" class="text-xs sm:text-sm font-black text-emerald-400">$10,000.00</div>
+                    </div>
+                </button>
+
+                <div id="account-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl glass-panel shadow-2xl border border-slate-700/80 py-2 z-50">
+                    <div class="px-3 py-1.5 border-b border-slate-800 text-[11px] text-slate-400 font-semibold">Select Account Type</div>
+                    <button onclick="app.switchAccount('DEMO')" class="w-full px-3 py-2 text-left hover:bg-slate-800/60 flex items-center justify-between transition">
+                        <div>
+                            <p class="text-xs font-bold text-slate-200">Demo Account</p>
+                            <p id="demo-bal-sub" class="text-[11px] text-emerald-400 font-mono">$10,000.00</p>
+                        </div>
+                        <span id="demo-check" class="text-emerald-400"><i data-lucide="check-circle" class="w-4 h-4"></i></span>
+                    </button>
+                    <button onclick="app.switchAccount('REAL')" class="w-full px-3 py-2 text-left hover:bg-slate-800/60 flex items-center justify-between transition border-t border-slate-800/50">
+                        <div>
+                            <p class="text-xs font-bold text-slate-200">Real Account</p>
+                            <p id="real-bal-sub" class="text-[11px] text-slate-400 font-mono">$0.00</p>
+                        </div>
+                        <span id="real-check" class="text-slate-600 hidden"><i data-lucide="check-circle" class="w-4 h-4"></i></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Cashier Buttons -->
+            <button onclick="app.openCashierModal('deposit')" class="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold px-3 py-2 rounded-xl text-xs shadow-md shadow-emerald-500/20 transition flex items-center space-x-1">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Deposit</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 pb-28 overflow-y-auto relative">
+
+        <!-- TAB 1: TRADE VIEW -->
+        <section id="view-trade" class="tab-view space-y-3 sm:space-y-4">
+            <!-- Asset Selector & Price Ticker Bar -->
+            <div class="glass-panel p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <select id="asset-selector" onchange="app.changeAsset(this.value)" class="bg-slate-900 border border-slate-700 text-slate-100 font-bold text-xs sm:text-sm rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-emerald-500 outline-none">
+                            <option value="R_100">Volatility 100 Index (1s)</option>
+                            <option value="R_75">Volatility 75 Index</option>
+                            <option value="R_50">Volatility 50 Index</option>
+                            <option value="R_25">Volatility 25 Index</option>
+                            <option value="R_10">Volatility 10 Index</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4 font-mono text-xs">
+                    <div>
+                        <span class="text-slate-400 text-[10px] block">CURRENT TICK</span>
+                        <span id="live-tick-price" class="text-sm sm:text-base font-extrabold text-emerald-400">743,892.45</span>
+                    </div>
+                    <div class="border-l border-slate-700 pl-3">
+                        <span class="text-slate-400 text-[10px] block">LAST DIGIT</span>
+                        <span id="live-last-digit" class="text-sm sm:text-base font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">5</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart & Execution Controls Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="lg:col-span-2 space-y-3">
+                    <div class="glass-panel p-3 rounded-2xl relative">
+                        <!-- Chart View Toggle Controls -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-800">
+                            <div class="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+                                <button onclick="app.setChartStyle('area')" id="chart-btn-area" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 flex items-center gap-1.5 transition">
+                                    <i data-lucide="line-chart" class="w-3.5 h-3.5"></i> Line / Ticks
+                                </button>
+                                <button onclick="app.setChartStyle('candlestick')" id="chart-btn-candlestick" class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 transition">
+                                    <i data-lucide="candlestick-chart" class="w-3.5 h-3.5"></i> Candlestick (OHLC)
+                                </button>
+                            </div>
+
+                            <div class="flex space-x-1 text-[10px] bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                                <button onclick="app.setTimeframe('1s')" id="tf-1s" class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-bold">1s</button>
+                                <button onclick="app.setTimeframe('1m')" id="tf-1m" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400">1m</button>
+                                <button onclick="app.setTimeframe('5m')" id="tf-5m" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400">5m</button>
+                                <button onclick="app.setTimeframe('15m')" id="tf-15m" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400">15m</button>
+                            </div>
+                        </div>
+
+                        <!-- TradingView Lightweight Canvas Chart -->
+                        <div id="tv-chart" class="w-full h-72 sm:h-80 rounded-xl overflow-hidden bg-[#090C10] border border-slate-800/80"></div>
+                    </div>
+
+                    <!-- Live Digit Ticks Stream -->
+                    <div class="glass-panel p-3 rounded-2xl">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-semibold text-slate-400">Live Tick Digit Stream</span>
+                            <span class="text-[10px] text-slate-500">Even / Odd Digit Analysis</span>
+                        </div>
+                        <div id="digit-stream" class="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none"></div>
+                    </div>
+                </div>
+
+                <!-- Contract Execution Form -->
+                <div class="glass-panel p-4 rounded-2xl space-y-4">
+                    <div class="border-b border-slate-800 pb-3">
+                        <label class="text-xs font-semibold text-slate-400 block mb-1.5">Trade Contract Type</label>
+                        <div class="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs">
+                            <button onclick="app.selectContractType('RISE_FALL')" id="btn-type-RISE_FALL" class="py-2 rounded-lg font-bold bg-emerald-500 text-slate-950 shadow">Rise / Fall</button>
+                            <button onclick="app.selectContractType('EVEN_ODD')" id="btn-type-EVEN_ODD" class="py-2 rounded-lg font-semibold text-slate-400 hover:text-white">Even / Odd</button>
+                            <button onclick="app.selectContractType('TOUCH')" id="btn-type-TOUCH" class="py-2 rounded-lg font-semibold text-slate-400 hover:text-white">Touch / No Touch</button>
+                            <button onclick="app.selectContractType('OVER_UNDER')" id="btn-type-OVER_UNDER" class="py-2 rounded-lg font-semibold text-slate-400 hover:text-white">Over / Under</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-400">Duration (Ticks)</label>
+                            <span id="duration-display" class="text-xs font-bold text-emerald-400">5 Ticks</span>
+                        </div>
+                        <input type="range" id="trade-ticks" min="1" max="10" value="5" oninput="app.updateDurationLabel(this.value)" class="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-400">Stake Amount ($ USD)</label>
+                            <span id="min-stake-notice" class="text-[10px] text-amber-400 font-semibold">Real Min: $10.00</span>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-slate-500 font-bold">$</span>
+                            <input type="number" id="trade-stake" value="10" step="0.50" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2 pl-7 pr-3 text-white font-mono font-bold text-sm focus:border-emerald-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex justify-between items-center">
+                        <span class="text-xs text-slate-400">Potential Payout (+95%):</span>
+                        <span id="payout-amount" class="text-sm font-black font-mono text-emerald-400">$19.50</span>
+                    </div>
+
+                    <div id="execution-buttons-container" class="grid grid-cols-2 gap-3 pt-2">
+                        <button onclick="app.executeTrade('RISE')" class="glow-btn-rise bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black py-3 rounded-xl flex flex-col items-center justify-center transition">
+                            <div class="flex items-center space-x-1 text-xs sm:text-sm">
+                                <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                <span id="btn-top-label">HIGHER / RISE</span>
+                            </div>
+                        </button>
+                        <button onclick="app.executeTrade('FALL')" class="glow-btn-fall bg-rose-500 hover:bg-rose-400 active:scale-95 text-white font-black py-3 rounded-xl flex flex-col items-center justify-center transition">
+                            <div class="flex items-center space-x-1 text-xs sm:text-sm">
+                                <i data-lucide="trending-down" class="w-4 h-4"></i>
+                                <span id="btn-bottom-label">LOWER / FALL</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: BOT AUTOMATION VIEW -->
+        <section id="view-bot" class="tab-view hidden space-y-4">
+            <div class="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <span class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <i data-lucide="bot" class="w-6 h-6"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-extrabold text-white">Ropez Automated DBot Engine</h2>
+                        <p class="text-xs text-slate-400">Automated Martingale & Even/Odd Synthetic Trading</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <button id="btn-start-bot" onclick="app.toggleBotExecution()" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center space-x-2">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        <span id="bot-toggle-text">START BOT</span>
+                    </button>
+                    <button onclick="app.loadBotPreset()" class="glass-panel hover:bg-slate-800 text-slate-300 font-bold px-4 py-2.5 rounded-xl text-sm transition flex items-center space-x-2 border border-slate-700">
+                        <i data-lucide="file-code" class="w-4 h-4"></i>
+                        <span>Strategy XML</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="glass-panel p-3.5 rounded-2xl">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Runs</p>
+                    <p id="bot-stat-runs" class="text-lg sm:text-xl font-black font-mono text-white mt-1">0</p>
+                </div>
+                <div class="glass-panel p-3.5 rounded-2xl">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Won / Lost</p>
+                    <p class="text-lg sm:text-xl font-black font-mono mt-1">
+                        <span id="bot-stat-won" class="text-emerald-400">0</span> / <span id="bot-stat-lost" class="text-rose-400">0</span>
+                    </p>
+                </div>
+                <div class="glass-panel p-3.5 rounded-2xl">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Stake</p>
+                    <p id="bot-stat-stake" class="text-lg sm:text-xl font-black font-mono text-white mt-1">$10.00</p>
+                </div>
+                <div class="glass-panel p-3.5 rounded-2xl">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bot PnL ($)</p>
+                    <p id="bot-stat-profit" class="text-lg sm:text-xl font-black font-mono text-emerald-400 mt-1">+$0.00</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-panel p-4 rounded-2xl space-y-3">
+                    <h3 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2 border-b border-slate-800 pb-2">Bot Strategy Risk Settings</h3>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Take Profit Target ($)</label>
+                        <input type="number" id="bot-target-profit" value="50" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2 px-3 text-white font-mono text-xs focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Stop Loss Limit ($)</label>
+                        <input type="number" id="bot-stop-loss" value="30" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2 px-3 text-white font-mono text-xs focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Base Stake ($)</label>
+                        <input type="number" id="bot-base-stake" value="10" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2 px-3 text-white font-mono text-xs focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Martingale Multiplier</label>
+                        <input type="number" id="bot-martingale" value="2" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2 px-3 text-white font-mono text-xs focus:border-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 glass-panel p-4 rounded-2xl flex flex-col h-80">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i> Bot Execution Console
+                        </span>
+                        <button onclick="app.clearBotLogs()" class="text-[10px] text-slate-500 hover:text-slate-300">Clear Logs</button>
+                    </div>
+                    <div id="bot-console-logs" class="flex-1 overflow-y-auto space-y-1 font-mono text-[11px] p-2 bg-[#080B10] rounded-xl border border-slate-800/80">
+                        <p class="text-slate-500">[System] Ropez DBot Engine active. Ready to run.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: HISTORY VIEW -->
+        <section id="view-history" class="tab-view hidden space-y-4">
+            <div class="glass-panel p-1.5 rounded-2xl flex border border-slate-800 bg-slate-900/50">
+                <button onclick="app.switchHistorySubTab('trades')" id="subtab-btn-trades" class="flex-1 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 transition">Trades Log</button>
+                <button onclick="app.switchHistorySubTab('transactions')" id="subtab-btn-transactions" class="flex-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">Cashier Ledger</button>
+            </div>
+
+            <div id="subtab-trades" class="glass-panel p-4 rounded-2xl overflow-x-auto">
+                <h3 class="text-sm font-bold text-white mb-3">Executed Contracts History</h3>
+                <table class="w-full text-left text-xs font-mono">
+                    <thead class="text-[10px] text-slate-400 border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="pb-2">Time</th>
+                            <th class="pb-2">Asset</th>
+                            <th class="pb-2">Contract</th>
+                            <th class="pb-2">Stake</th>
+                            <th class="pb-2">Result</th>
+                            <th class="pb-2 text-right">Profit / Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-history-rows" class="divide-y divide-slate-800/60">
+                        <tr>
+                            <td colspan="6" class="py-6 text-center text-slate-500 text-xs font-sans">No trades recorded in this session.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="subtab-transactions" class="glass-panel p-4 rounded-2xl overflow-x-auto hidden">
+                <h3 class="text-sm font-bold text-white mb-3">Deposit & Withdrawal Status Ledger</h3>
+                <table class="w-full text-left text-xs font-mono">
+                    <thead class="text-[10px] text-slate-400 border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="pb-2">Type</th>
+                            <th class="pb-2">Amount</th>
+                            <th class="pb-2">Ref Code</th>
+                            <th class="pb-2">Status</th>
+                            <th class="pb-2 text-right">Verification Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody id="financial-ledger-rows" class="divide-y divide-slate-800/60">
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-slate-500 text-xs font-sans">No cashier submissions recorded yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 4: ACCOUNT VIEW -->
+        <section id="view-account" class="tab-view hidden space-y-4">
+            <div class="glass-panel p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center font-black text-2xl text-slate-950 shadow-lg shadow-emerald-500/20">
+                        <i data-lucide="user" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h2 id="acc-phone-display" class="text-base font-extrabold text-white">+254 746 726 579</h2>
+                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Verified Ropez Account</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <button onclick="app.openCashierModal('deposit')" class="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">
+                        Deposit
+                    </button>
+                    <button onclick="app.openCashierModal('withdraw')" class="flex-1 sm:flex-none glass-panel hover:bg-slate-800 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs border border-slate-700 transition">
+                        Withdraw
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="glass-panel p-4 rounded-2xl space-y-2 border border-slate-800">
+                    <p class="text-xs text-slate-400 font-semibold">Real Trading Account</p>
+                    <p id="acc-tab-real-bal" class="text-2xl font-black font-mono text-emerald-400">$0.00 USD</p>
+                    <div class="text-[11px] text-slate-400 space-y-1 pt-1 border-t border-slate-800">
+                        <p>• Min Deposit: <strong class="text-white">$5.00 USD</strong></p>
+                        <p>• Min Stake: <strong class="text-white">$10.00 USD</strong></p>
+                        <p>• Min Profit Withdrawal: <strong class="text-white">$25.00 USD</strong></p>
+                        <p>• Account Balance Reserve: <strong class="text-amber-400">$5.00 USD retained</strong></p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-2xl space-y-2 border border-slate-800">
+                    <p class="text-xs text-slate-400 font-semibold">Demo Practice Account</p>
+                    <p id="acc-tab-demo-bal" class="text-2xl font-black font-mono text-amber-400">$10,000.00 USD</p>
+                    <p class="text-[11px] text-slate-500">Practice binary option contracts risk-free with virtual currency.</p>
+                    <button onclick="app.resetDemoBalance()" class="text-xs text-emerald-400 font-bold hover:underline pt-2 block">Refill $10,000 Demo</button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl space-y-2.5">
+                <h3 class="text-xs font-extrabold uppercase text-slate-400 tracking-wider border-b border-slate-800 pb-2">Manual Payment Details</h3>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-300">Official M-Pesa Line:</span>
+                    <span class="font-mono font-extrabold text-emerald-400">0746726579</span>
+                </div>
+                <div class="flex items-center justify-between text-xs border-t border-slate-800/60 pt-2">
+                    <span class="text-slate-300">Verification Engine:</span>
+                    <span class="font-mono text-amber-400 font-bold">Strict System Approval Required</span>
+                </div>
+            </div>
+
+            <button onclick="app.logout()" class="w-full glass-panel hover:bg-rose-500/20 text-rose-400 font-bold py-3 rounded-2xl border border-rose-500/30 text-xs transition flex items-center justify-center space-x-2">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Logout Session</span>
+            </button>
+        </section>
+
+        <footer class="mt-8 pt-4 border-t border-slate-800/80 text-center px-4">
+            <p class="text-[10px] text-slate-500 leading-relaxed max-w-3xl mx-auto">
+                <strong class="text-slate-400">Financial Risk Warning:</strong> Synthetic indices and binary derivative contracts involve substantial risk of capital loss. Statistically, a significant percentage of retail traders lose money. Only trade with capital you can afford to lose. Past market movement is not an indicator of future performance.
+            </p>
+        </footer>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-slate-800/90 py-2 px-4 shadow-2xl bg-slate-950/95 backdrop-blur-md">
+        <div class="max-w-md mx-auto grid grid-cols-4 gap-1 text-center">
+            <button onclick="app.switchTab('trade')" id="nav-btn-trade" class="nav-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-emerald-400 transition">
+                <i data-lucide="line-chart" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[10px] font-extrabold">Trade</span>
+            </button>
+            <button onclick="app.switchTab('bot')" id="nav-btn-bot" class="nav-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400 hover:text-slate-200 transition">
+                <i data-lucide="bot" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[10px] font-extrabold">Bot</span>
+            </button>
+            <button onclick="app.switchTab('history')" id="nav-btn-history" class="nav-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400 hover:text-slate-200 transition">
+                <i data-lucide="history" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[10px] font-extrabold">History</span>
+            </button>
+            <button onclick="app.switchTab('account')" id="nav-btn-account" class="nav-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400 hover:text-slate-200 transition">
+                <i data-lucide="user" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[10px] font-extrabold">Account</span>
+            </button>
+        </div>
+    </nav>
+
+    <div id="modal-auth" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md p-6 rounded-3xl border border-slate-700/80 shadow-2xl space-y-5">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 mx-auto flex items-center justify-center font-black text-2xl text-slate-950 shadow-lg shadow-emerald-500/30">
+                    R
+                </div>
+                <h2 class="text-xl font-extrabold text-white">Ropez Trader Access</h2>
+                <p class="text-xs text-slate-400">Sign in or register with your phone number & password</p>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 block mb-1">M-Pesa Registered Phone Number</label>
+                    <input type="text" id="auth-phone" placeholder="0746726579" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-mono text-white focus:border-emerald-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 block mb-1">Account Password</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm text-white focus:border-emerald-500 outline-none">
+                </div>
+                <p id="auth-error" class="text-xs text-rose-400 hidden font-semibold text-center"></p>
+                <button onclick="app.login()" class="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold py-3 rounded-xl shadow-lg shadow-emerald-500/20 text-sm hover:opacity-95 transition">
+                    Access Platform
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cashier" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md p-5 rounded-3xl border border-slate-700/80 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="cashier-title" class="text-base font-extrabold text-white">Cashier Gateway</h3>
+                <button onclick="app.closeCashierModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- M-Pesa Step-by-Step Deposit Guide -->
+            <div id="cashier-deposit-guide" class="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-xs text-slate-300 space-y-1.5">
+                <p class="font-bold text-emerald-400">Step-by-Step M-Pesa Deposit Guide:</p>
+                <ol class="list-decimal list-inside text-[11px] space-y-1 text-slate-300">
+                    <li>Go to M-Pesa & Send Money to <strong class="text-emerald-400 font-mono">0746726579</strong>.</li>
+                    <li>Minimum Deposit: <strong class="text-white">$5.00 USD</strong> (~650 KES).</li>
+                    <li>Enter sent amount ($) & your M-Pesa Ref Code below.</li>
+                    <li>Submit request. <span class="text-amber-400 font-bold">Strict Manual Verification:</span> Real balance updates only after system admin approval.</li>
+                </ol>
+            </div>
+
+            <!-- Withdrawal Rules Guide -->
+            <div id="cashier-withdraw-guide" class="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-xs text-slate-300 hidden space-y-1">
+                <p class="font-bold text-amber-400">Real Account Cashout Rules:</p>
+                <p class="text-[11px] text-slate-300">• Minimum accumulated profit requirement: <strong class="text-white">$25.00 USD</strong>.</p>
+                <p class="text-[11px] text-slate-300">• Partial Cashout Policy: <strong class="text-amber-300">At least $5.00 USD must remain</strong> in your Real balance after withdrawal.</p>
+            </div>
+
+            <div>
+                <label id="cashier-amount-label" class="text-xs font-semibold text-slate-400 block mb-1">Amount ($ USD, Minimum $5.00)</label>
+                <input type="number" id="cashier-amount" value="5" min="5" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-mono text-white focus:border-emerald-500 outline-none">
+            </div>
+
+            <div id="cashier-ref-box">
+                <label class="text-xs font-semibold text-slate-400 block mb-1">M-Pesa Transaction Ref Code</label>
+                <input type="text" id="cashier-ref-code" placeholder="e.g. SAK7829103" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-mono text-white focus:border-emerald-500 outline-none uppercase">
+            </div>
+
+            <button onclick="app.processCashierSubmit()" id="cashier-action-btn" class="w-full bg-emerald-500 text-slate-950 font-black py-3 rounded-xl shadow-lg shadow-emerald-500/20 text-sm transition">
+                Submit Request
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-admin" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-xl p-5 rounded-3xl border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <span class="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    </span>
+                    <h3 class="text-base font-extrabold text-white">System Verification Panel</h3>
+                </div>
+                <button onclick="app.closeAdminModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <p class="text-xs text-slate-400">Strict System Verification: Review submitted deposit/withdrawal transactions. Approving instantly credits or debits the user's Real Account.</p>
+
+            <div class="overflow-x-auto max-h-64 scrollbar-thin">
+                <table class="w-full text-left text-xs font-mono">
+                    <thead class="text-[10px] text-slate-400 border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="pb-2">Type</th>
+                            <th class="pb-2">Amount</th>
+                            <th class="pb-2">Ref Code</th>
+                            <th class="pb-2">Status</th>
+                            <th class="pb-2 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-pending-rows" class="divide-y divide-slate-800/60">
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-slate-500 text-xs font-sans">No pending manual requests.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                <button onclick="app.approveAllAdmin()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs shadow-md shadow-emerald-500/20 transition">
+                    Approve All Pending
+                </button>
+                <button onclick="app.closeAdminModal()" class="glass-panel hover:bg-slate-800 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs border border-slate-700 transition">
+                    Close Panel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            activeTab: 'trade',
+            accountType: 'DEMO',
+            balances: {
+                DEMO: 10000.00,
+                REAL: 0.00
+            },
+            accumulatedRealProfit: 0.00,
+            userPhone: '0746726579',
+            currentAsset: 'R_100',
+            contractType: 'RISE_FALL',
+            durationTicks: 5,
+            currentPrice: 743892.45,
+            chart: null,
+            areaSeries: null,
+            candlestickSeries: null,
+            chartMode: 'area',
+            currentCandle: null,
+            timeframeSeconds: 1,
+            digitHistory: [],
+            tradeHistory: [],
+            cashierLedger: [],
+            botRunning: false,
+            botInterval: null,
+            botStats: { runs: 0, won: 0, lost: 0, profit: 0, currentStake: 10 },
+            logoClickCount: 0,
+
+            init() {
+                lucide.createIcons();
+                this.checkSession();
+                this.initChart();
+                this.startPriceSimulator();
+                this.updateUIBalances();
+            },
+
+            checkSession() {
+                const savedPhone = localStorage.getItem('ropez_user_phone');
+                if (savedPhone) {
+                    this.userPhone = savedPhone;
+                    document.getElementById('acc-phone-display').innerText = savedPhone;
+                    document.getElementById('modal-auth').classList.add('hidden');
+                } else {
+                    document.getElementById('modal-auth').classList.remove('hidden');
+                }
+            },
+
+            login() {
+                const phone = document.getElementById('auth-phone').value.trim();
+                const pass = document.getElementById('auth-password').value.trim();
+                const err = document.getElementById('auth-error');
+
+                if (!phone || !pass) {
+                    err.innerText = "Phone number and password are required!";
+                    err.classList.remove('hidden');
+                    return;
+                }
+
+                this.userPhone = phone;
+                localStorage.setItem('ropez_user_phone', phone);
+                document.getElementById('acc-phone-display').innerText = phone;
+                document.getElementById('modal-auth').classList.add('hidden');
+            },
+
+            logout() {
+                localStorage.removeItem('ropez_user_phone');
+                document.getElementById('modal-auth').classList.remove('hidden');
+            },
+
+            handleLogoClick() {
+                this.logoClickCount++;
+                if (this.logoClickCount >= 3) {
+                    this.logoClickCount = 0;
+                    const pin = prompt("Enter System Admin Verification PIN:");
+                    if (pin === "7265") {
+                        this.openAdminModal();
+                    } else if (pin !== null) {
+                        alert("Invalid PIN.");
+                    }
+                }
+            },
+
+            switchTab(tabId) {
+                this.activeTab = tabId;
+                document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
+                document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+                document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                    btn.classList.remove('text-emerald-400');
+                    btn.classList.add('text-slate-400');
+                });
+                const activeNavBtn = document.getElementById(`nav-btn-${tabId}`);
+                if (activeNavBtn) {
+                    activeNavBtn.classList.remove('text-slate-400');
+                    activeNavBtn.classList.add('text-emerald-400');
+                }
+            },
+
+            switchHistorySubTab(subTab) {
+                if (subTab === 'trades') {
+                    document.getElementById('subtab-trades').classList.remove('hidden');
+                    document.getElementById('subtab-transactions').classList.add('hidden');
+                    document.getElementById('subtab-btn-trades').className = "flex-1 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 transition";
+                    document.getElementById('subtab-btn-transactions').className = "flex-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition";
+                } else {
+                    document.getElementById('subtab-trades').classList.add('hidden');
+                    document.getElementById('subtab-transactions').classList.remove('hidden');
+                    document.getElementById('subtab-btn-transactions').className = "flex-1 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 transition";
+                    document.getElementById('subtab-btn-trades').className = "flex-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition";
+                }
+            },
+
+            initChart() {
+                const container = document.getElementById('tv-chart');
+                if (!container) return;
+                
+                this.chart = LightweightCharts.createChart(container, {
+                    layout: {
+                        background: { color: '#090C10' },
+                        textColor: '#94A3B8',
+                    },
+                    grid: {
+                        vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
+                        horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
+                    },
+                    timeScale: {
+                        timeVisible: true,
+                        secondsVisible: true,
+                    },
+                });
+
+                this.areaSeries = this.chart.addAreaSeries({
+                    topColor: 'rgba(0, 230, 118, 0.35)',
+                    bottomColor: 'rgba(0, 230, 118, 0.0)',
+                    lineColor: '#00E676',
+                    lineWidth: 2,
+                });
+
+                this.candlestickSeries = this.chart.addCandlestickSeries({
+                    upColor: '#00E676',
+                    downColor: '#FF5252',
+                    borderVisible: false,
+                    wickUpColor: '#00E676',
+                    wickDownColor: '#FF5252'
+                });
+
+                const now = Math.floor(Date.now() / 1000);
+                const areaData = [];
+                const candleData = [];
+                let price = 743890.00;
+
+                for (let i = 60; i >= 0; i--) {
+                    const time = now - i;
+                    const change = (Math.random() - 0.49) * 2.5;
+                    const open = price;
+                    const close = price + change;
+                    const high = Math.max(open, close) + Math.random() * 0.8;
+                    const low = Math.min(open, close) - Math.random() * 0.8;
+                    price = close;
+
+                    areaData.push({ time, value: close });
+                    candleData.push({ time, open, high, low, close });
+                }
+
+                this.areaSeries.setData(areaData);
+                this.candlestickSeries.setData(candleData);
+                this.currentPrice = price;
+                this.setChartStyle('area');
+            },
+
+            setChartStyle(mode) {
+                this.chartMode = mode;
+                const btnArea = document.getElementById('chart-btn-area');
+                const btnCandle = document.getElementById('chart-btn-candlestick');
+
+                if (mode === 'area') {
+                    this.areaSeries.applyOptions({ visible: true });
+                    this.candlestickSeries.applyOptions({ visible: false });
+                    btnArea.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 flex items-center gap-1.5 transition";
+                    btnCandle.className = "px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 transition";
+                } else {
+                    this.areaSeries.applyOptions({ visible: false });
+                    this.candlestickSeries.applyOptions({ visible: true });
+                    btnCandle.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 flex items-center gap-1.5 transition";
+                    btnArea.className = "px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 transition";
+                }
+            },
+
+            setTimeframe(tf) {
+                ['1s', '1m', '5m', '15m'].forEach(t => {
+                    const btn = document.getElementById(`tf-${t}`);
+                    if (t === tf) {
+                        btn.className = "px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-bold";
+                    } else {
+                        btn.className = "px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400";
+                    }
+                });
+
+                if (tf === '1s') this.timeframeSeconds = 1;
+                else if (tf === '1m') this.timeframeSeconds = 60;
+                else if (tf === '5m') this.timeframeSeconds = 300;
+                else if (tf === '15m') this.timeframeSeconds = 900;
+            },
+
+            startPriceSimulator() {
+                setInterval(() => {
+                    const delta = (Math.random() - 0.49) * 1.8;
+                    this.currentPrice += delta;
+                    const now = Math.floor(Date.now() / 1000);
+                    const candleTime = Math.floor(now / this.timeframeSeconds) * this.timeframeSeconds;
+
+                    if (this.areaSeries) {
+                        this.areaSeries.update({ time: now, value: this.currentPrice });
+                    }
+
+                    if (this.candlestickSeries) {
+                        if (!this.currentCandle || this.currentCandle.time !== candleTime) {
+                            this.currentCandle = {
+                                time: candleTime,
+                                open: this.currentPrice,
+                                high: this.currentPrice,
+                                low: this.currentPrice,
+                                close: this.currentPrice
+                            };
+                        } else {
+                            this.currentCandle.high = Math.max(this.currentCandle.high, this.currentPrice);
+                            this.currentCandle.low = Math.min(this.currentCandle.low, this.currentPrice);
+                            this.currentCandle.close = this.currentPrice;
+                        }
+                        this.candlestickSeries.update(this.currentCandle);
+                    }
+
+                    const priceStr = this.currentPrice.toFixed(2);
+                    const lastDigit = priceStr.slice(-1);
+
+                    document.getElementById('live-tick-price').innerText = priceStr;
+                    document.getElementById('live-last-digit').innerText = lastDigit;
+
+                    this.pushDigitStream(parseInt(lastDigit, 10));
+                }, 1000);
+            },
+
+            pushDigitStream(digit) {
+                this.digitHistory.unshift(digit);
+                if (this.digitHistory.length > 15) this.digitHistory.pop();
+
+                const container = document.getElementById('digit-stream');
+                container.innerHTML = this.digitHistory.map(d => {
+                    const isEven = d % 2 === 0;
+                    return `<span class="px-2 py-1 rounded text-xs font-mono font-bold ${isEven ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">${d}</span>`;
+                }).join('');
+            },
+
+            toggleAccountDropdown() {
+                document.getElementById('account-dropdown').classList.toggle('hidden');
+            },
+
+            switchAccount(type) {
+                this.accountType = type;
+                document.getElementById('account-type-badge').innerText = type;
+                document.getElementById('account-type-badge').className = type === 'DEMO' ? 'px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold' : 'px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold';
+                
+                if (type === 'DEMO') {
+                    document.getElementById('demo-check').classList.remove('hidden');
+                    document.getElementById('real-check').classList.add('hidden');
+                    document.getElementById('min-stake-notice').innerText = "Demo Min: $1.00";
+                } else {
+                    document.getElementById('demo-check').classList.add('hidden');
+                    document.getElementById('real-check').classList.remove('hidden');
+                    document.getElementById('min-stake-notice').innerText = "Real Min: $10.00";
+                }
+                this.toggleAccountDropdown();
+                this.updateUIBalances();
+            },
+
+            updateUIBalances() {
+                const activeBal = this.balances[this.accountType].toFixed(2);
+                document.getElementById('account-balance').innerText = `$${activeBal}`;
+                document.getElementById('demo-bal-sub').innerText = `$${this.balances.DEMO.toFixed(2)}`;
+                document.getElementById('real-bal-sub').innerText = `$${this.balances.REAL.toFixed(2)}`;
+                document.getElementById('acc-tab-real-bal').innerText = `$${this.balances.REAL.toFixed(2)} USD`;
+                document.getElementById('acc-tab-demo-bal').innerText = `$${this.balances.DEMO.toFixed(2)} USD`;
+            },
+
+            resetDemoBalance() {
+                this.balances.DEMO = 10000.00;
+                this.updateUIBalances();
+            },
+
+            selectContractType(type) {
+                this.contractType = type;
+                ['RISE_FALL', 'EVEN_ODD', 'TOUCH', 'OVER_UNDER'].forEach(t => {
+                    const btn = document.getElementById(`btn-type-${t}`);
+                    if (t === type) {
+                        btn.className = "py-2 rounded-lg font-bold bg-emerald-500 text-slate-950 shadow";
+                    } else {
+                        btn.className = "py-2 rounded-lg font-semibold text-slate-400 hover:text-white";
+                    }
+                });
+
+                const topLabel = document.getElementById('btn-top-label');
+                const bottomLabel = document.getElementById('btn-bottom-label');
+                if (type === 'EVEN_ODD') {
+                    topLabel.innerText = "EVEN";
+                    bottomLabel.innerText = "ODD";
+                } else if (type === 'TOUCH') {
+                    topLabel.innerText = "TOUCH";
+                    bottomLabel.innerText = "NO TOUCH";
+                } else if (type === 'OVER_UNDER') {
+                    topLabel.innerText = "OVER 4";
+                    bottomLabel.innerText = "UNDER 5";
+                } else {
+                    topLabel.innerText = "HIGHER / RISE";
+                    bottomLabel.innerText = "LOWER / FALL";
+                }
+            },
+
+            updateDurationLabel(val) {
+                this.durationTicks = val;
+                document.getElementById('duration-display').innerText = `${val} Ticks`;
+            },
+
+            executeTrade(direction) {
+                const stakeInput = parseFloat(document.getElementById('trade-stake').value);
+                if (isNaN(stakeInput)) return;
+
+                // Enforce Real Account Minimum Stake Rule ($10.00 USD)
+                if (this.accountType === 'REAL' && stakeInput < 10.00) {
+                    alert("Rule Violation: Real account trades require a minimum stake of $10.00 USD.");
+                    return;
+                }
+
+                if (this.balances[this.accountType] < stakeInput) {
+                    alert("Insufficient balance in your active account!");
+                    return;
+                }
+
+                this.balances[this.accountType] -= stakeInput;
+                this.updateUIBalances();
+
+                setTimeout(() => {
+                    const isWin = Math.random() > 0.48;
+                    const payout = isWin ? stakeInput * 1.95 : 0;
+                    const profitLoss = isWin ? stakeInput * 0.95 : -stakeInput;
+
+                    if (isWin) {
+                        this.balances[this.accountType] += payout;
+                        if (this.accountType === 'REAL') {
+                            this.accumulatedRealProfit += profitLoss;
+                        }
+                        this.updateUIBalances();
+                    }
+
+                    this.tradeHistory.unshift({
+                        time: new Date().toLocaleTimeString(),
+                        asset: this.currentAsset,
+                        type: `${this.contractType} (${direction})`,
+                        stake: `$${stakeInput.toFixed(2)}`,
+                        result: isWin ? 'WON' : 'LOST',
+                        pnl: `${isWin ? '+' : ''}$${profitLoss.toFixed(2)}`,
+                        win: isWin
+                    });
+
+                    this.renderTradeHistory();
+                }, this.durationTicks * 1000);
+            },
+
+            renderTradeHistory() {
+                const tbody = document.getElementById('trade-history-rows');
+                if (this.tradeHistory.length === 0) return;
+
+                tbody.innerHTML = this.tradeHistory.map(t => `
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="py-2.5 text-slate-400">${t.time}</td>
+                        <td class="py-2.5 text-white font-bold">${t.asset}</td>
+                        <td class="py-2.5 text-slate-300">${t.type}</td>
+                        <td class="py-2.5 text-slate-300">${t.stake}</td>
+                        <td class="py-2.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${t.win ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${t.result}</span>
+                        </td>
+                        <td class="py-2.5 text-right font-bold ${t.win ? 'text-emerald-400' : 'text-rose-400'}">${t.pnl}</td>
+                    </tr>
+                `).join('');
+            },
+
+            toggleBotExecution() {
+                this.botRunning = !this.botRunning;
+                const btnText = document.getElementById('bot-toggle-text');
+                const btn = document.getElementById('btn-start-bot');
+
+                if (this.botRunning) {
+                    btnText.innerText = "STOP BOT";
+                    btn.className = "flex-1 md:flex-none bg-rose-500 hover:bg-rose-400 text-white font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-rose-500/20 transition flex items-center justify-center space-x-2";
+                    this.logBotConsole("[Bot] Strategy initialized. Listening to market tick stream...");
+                    
+                    this.botInterval = setInterval(() => {
+                        this.runBotIteration();
+                    }, 3500);
+                } else {
+                    btnText.innerText = "START BOT";
+                    btn.className = "flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center space-x-2";
+                    clearInterval(this.botInterval);
+                    this.logBotConsole("[Bot] Strategy execution stopped.");
+                }
+            },
+
+            runBotIteration() {
+                const baseStake = parseFloat(document.getElementById('bot-base-stake').value) || 10;
+                
+                if (this.accountType === 'REAL' && this.botStats.currentStake < 10) {
+                    this.botStats.currentStake = 10;
+                }
+
+                if (this.balances[this.accountType] < this.botStats.currentStake) {
+                    this.logBotConsole("[Bot Error] Insufficient funds for bot stake.");
+                    this.toggleBotExecution();
+                    return;
+                }
+
+                this.botStats.runs++;
+                const isWin = Math.random() > 0.49;
+                const multiplier = parseFloat(document.getElementById('bot-martingale').value) || 2;
+
+                if (isWin) {
+                    const profit = this.botStats.currentStake * 0.95;
+                    this.botStats.won++;
+                    this.botStats.profit += profit;
+                    this.balances[this.accountType] += profit;
+                    if (this.accountType === 'REAL') this.accumulatedRealProfit += profit;
+                    this.logBotConsole(`[Bot] Contract WIN! Profit: +$${profit.toFixed(2)}`);
+                    this.botStats.currentStake = Math.max(baseStake, this.accountType === 'REAL' ? 10 : 1);
+                } else {
+                    const loss = this.botStats.currentStake;
+                    this.botStats.lost++;
+                    this.botStats.profit -= loss;
+                    this.balances[this.accountType] -= loss;
+                    this.logBotConsole(`[Bot] Contract LOSS. Stake lost: -$${loss.toFixed(2)}`);
+                    this.botStats.currentStake *= multiplier;
+                }
+
+                this.updateUIBalances();
+                this.updateBotStatsUI();
+            },
+
+            updateBotStatsUI() {
+                document.getElementById('bot-stat-runs').innerText = this.botStats.runs;
+                document.getElementById('bot-stat-won').innerText = this.botStats.won;
+                document.getElementById('bot-stat-lost').innerText = this.botStats.lost;
+                document.getElementById('bot-stat-stake').innerText = `$${this.botStats.currentStake.toFixed(2)}`;
+                
+                const pEl = document.getElementById('bot-stat-profit');
+                const isPos = this.botStats.profit >= 0;
+                pEl.innerText = `${isPos ? '+' : ''}$${this.botStats.profit.toFixed(2)}`;
+                pEl.className = `text-lg sm:text-xl font-black font-mono mt-1 ${isPos ? 'text-emerald-400' : 'text-rose-400'}`;
+            },
+
+            logBotConsole(msg) {
+                const logs = document.getElementById('bot-console-logs');
+                const p = document.createElement('p');
+                p.className = "text-slate-300";
+                p.innerText = `${new Date().toLocaleTimeString()} - ${msg}`;
+                logs.appendChild(p);
+                logs.scrollTop = logs.scrollHeight;
+            },
+
+            clearBotLogs() {
+                document.getElementById('bot-console-logs').innerHTML = '';
+            },
+
+            loadBotPreset() {
+                alert("Default DBot XML Martingale Strategy Loaded Successfully.");
+            },
+
+            openCashierModal(type) {
+                const modal = document.getElementById('modal-cashier');
+                modal.classList.remove('hidden');
+                modal.dataset.mode = type;
+
+                if (type === 'deposit') {
+                    document.getElementById('cashier-title').innerText = "Manual M-Pesa Deposit Gateway";
+                    document.getElementById('cashier-deposit-guide').classList.remove('hidden');
+                    document.getElementById('cashier-withdraw-guide').classList.add('hidden');
+                    document.getElementById('cashier-amount-label').innerText = "Amount ($ USD, Minimum $5.00)";
+                    document.getElementById('cashier-amount').value = "5";
+                    document.getElementById('cashier-amount').min = "5";
+                    document.getElementById('cashier-ref-box').classList.remove('hidden');
+                    document.getElementById('cashier-action-btn').innerText = "Submit Deposit Request";
+                } else {
+                    document.getElementById('cashier-title').innerText = "Manual Real Account Withdrawal";
+                    document.getElementById('cashier-deposit-guide').classList.add('hidden');
+                    document.getElementById('cashier-withdraw-guide').classList.remove('hidden');
+                    document.getElementById('cashier-amount-label').innerText = "Cashout Amount ($ USD, Minimum $25.00)";
+                    document.getElementById('cashier-amount').value = "25";
+                    document.getElementById('cashier-amount').min = "25";
+                    document.getElementById('cashier-ref-box').classList.add('hidden');
+                    document.getElementById('cashier-action-btn').innerText = "Submit Withdrawal Request";
+                }
+            },
+
+            closeCashierModal() {
+                document.getElementById('modal-cashier').classList.add('hidden');
+            },
+
+            processCashierSubmit() {
+                const mode = document.getElementById('modal-cashier').dataset.mode;
+                const amt = parseFloat(document.getElementById('cashier-amount').value);
+                const refCode = (document.getElementById('cashier-ref-code').value || '').trim().toUpperCase();
+
+                if (mode === 'deposit') {
+                    if (isNaN(amt) || amt < 5.00) {
+                        alert("Rule Violation: Minimum deposit amount is $5.00 USD.");
+                        return;
+                    }
+                    if (!refCode) {
+                        alert("Please enter your M-Pesa transaction reference code (e.g., SAB81923).");
+                        return;
+                    }
+                } else {
+                    if (this.accountType !== 'REAL') {
+                        alert("Withdrawals can only be requested from your REAL account!");
+                        return;
+                    }
+                    if (isNaN(amt) || amt < 25.00) {
+                        alert("Rule Violation: Minimum withdrawal amount is $25.00 USD.");
+                        return;
+                    }
+                    if (this.accumulatedRealProfit < 25.00) {
+                        alert(`Withdrawal Blocked: You need at least $25.00 USD accumulated profit. Current profit: $${this.accumulatedRealProfit.toFixed(2)} USD.`);
+                        return;
+                    }
+                    // Partial Withdrawal Rule: At least $5 USD MUST remain in the Real Account Balance
+                    const maxWithdrawable = this.balances.REAL - 5.00;
+                    if (amt > maxWithdrawable) {
+                        alert(`Partial Withdrawal Rule: At least $5.00 USD must remain in your account balance after cashout. Maximum withdrawable right now: $${Math.max(0, maxWithdrawable).toFixed(2)} USD.`);
+                        return;
+                    }
+                }
+
+                const txId = 'TX-' + Math.floor(100000 + Math.random() * 900000);
+                const newTx = {
+                    id: txId,
+                    type: mode.toUpperCase(),
+                    amount: `$${amt.toFixed(2)}`,
+                    refCode: refCode || 'REF-' + txId,
+                    status: 'PENDING SYSTEM APPROVAL',
+                    rawAmount: amt
+                };
+
+                this.cashierLedger.unshift(newTx);
+                this.closeCashierModal();
+                this.renderCashierLedger();
+                this.switchTab('history');
+                this.switchHistorySubTab('transactions');
+
+                alert(`Request Submitted Successfully!\nStatus: PENDING SYSTEM APPROVAL\nFunds will reflect in your real account only after system admin approval.`);
+            },
+
+            openAdminModal() {
+                const modal = document.getElementById('modal-admin');
+                modal.classList.remove('hidden');
+                this.renderAdminPendingRows();
+            },
+
+            closeAdminModal() {
+                document.getElementById('modal-admin').classList.add('hidden');
+            },
+
+            approveTx(txId) {
+                const tx = this.cashierLedger.find(t => t.id === txId);
+                if (!tx || tx.status === 'APPROVED') return;
+
+                tx.status = 'APPROVED';
+
+                if (tx.type === 'DEPOSIT') {
+                    this.balances.REAL += tx.rawAmount;
+                } else {
+                    this.balances.REAL -= tx.rawAmount;
+                }
+                this.updateUIBalances();
+                this.renderCashierLedger();
+                this.renderAdminPendingRows();
+            },
+
+            approveAllAdmin() {
+                const pending = this.cashierLedger.filter(t => t.status === 'PENDING SYSTEM APPROVAL');
+                if (pending.length === 0) {
+                    alert("No pending manual requests to approve.");
+                    return;
+                }
+
+                pending.forEach(tx => {
+                    tx.status = 'APPROVED';
+                    if (tx.type === 'DEPOSIT') {
+                        this.balances.REAL += tx.rawAmount;
+                    } else {
+                        this.balances.REAL -= tx.rawAmount;
+                    }
+                });
+
+                this.updateUIBalances();
+                this.renderCashierLedger();
+                this.renderAdminPendingRows();
+                alert("All pending manual deposit and withdrawal requests successfully approved!");
+            },
+
+            renderAdminPendingRows() {
+                const tbody = document.getElementById('admin-pending-rows');
+                const pending = this.cashierLedger.filter(t => t.status === 'PENDING SYSTEM APPROVAL');
+
+                if (pending.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 text-xs font-sans">No pending manual requests.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = pending.map(tx => `
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="py-2.5 font-bold ${tx.type === 'DEPOSIT' ? 'text-emerald-400' : 'text-amber-400'}">${tx.type}</td>
+                        <td class="py-2.5 text-white font-bold">${tx.amount}</td>
+                        <td class="py-2.5 text-slate-300 font-mono">${tx.refCode}</td>
+                        <td class="py-2.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">PENDING</span>
+                        </td>
+                        <td class="py-2.5 text-right">
+                            <button onclick="app.approveTx('${tx.id}')" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3 py-1 rounded-lg text-[11px] transition">
+                                Approve
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            renderCashierLedger() {
+                const tbody = document.getElementById('financial-ledger-rows');
+                if (this.cashierLedger.length === 0) return;
+
+                tbody.innerHTML = this.cashierLedger.map(tx => `
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="py-2.5 font-bold ${tx.type === 'DEPOSIT' ? 'text-emerald-400' : 'text-amber-400'}">${tx.type}</td>
+                        <td class="py-2.5 text-white font-bold">${tx.amount}</td>
+                        <td class="py-2.5 text-slate-300 font-mono">${tx.refCode}</td>
+                        <td class="py-2.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${tx.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${tx.status}</span>
+                        </td>
+                        <td class="py-2.5 text-right font-mono text-slate-400 text-[11px]">
+                            ${tx.status === 'APPROVED' ? '<span class="text-emerald-400 font-bold">Approved & Credited</span>' : '<span class="text-amber-400 font-bold">Awaiting System Admin</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        };
+
+        window.onload = () => {
+            app.init();
+        };
+    </script>
+</body>
+</html>
